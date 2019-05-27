@@ -1,0 +1,23 @@
+name: pyplc
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - cudatoolkit=10.0
+  - python=3.7
+  - pytorch
+  - torchvision
+  - visdom
+  - jupyter
+  - scipy  
+  - matplotlib
+  - h5py
+  - pip
+  - pip:
+      - torch-scatter
+      - torch-sparse
+      - torch-cluster
+      - torch-spline-conv
+      - torch-geometric
+
