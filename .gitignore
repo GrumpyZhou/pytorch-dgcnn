@@ -1,4 +1,5 @@
 # Program
+*.out
 data*
 output/
 *.ipynb
