@@ -1,4 +1,3 @@
-import time
 import torch
 import torch.nn as nn 
 import torch.nn.functional as F
@@ -31,7 +30,7 @@ class MLP(nn.Module):
 class DGCNNCls(BaseNet):
     def __init__(self, num_classes, K=10, conv_aggr = 'max', device=None):
         super().__init__()
-        print('Build up DGCNNCls model...')
+        print('Build up DGCNNCls model, num_classes {}, K {}'.format(num_classes, K))
         self.K = K
         self.num_classes = num_classes
         self.conv_aggr = conv_aggr
@@ -58,6 +57,7 @@ class DGCNNCls(BaseNet):
     def init_weights_(self):
         print('Initialize all model parameters: TBD')
         pass
+        #self.apply(self.xavier_init_func_)
                     
     def forward(self, pts, batch_ids):
         """
@@ -76,8 +76,8 @@ class DGCNNCls(BaseNet):
             out = edge_conv(out, edge_index)
             edge_conv_outs.append(out) 
         out = torch.cat(edge_conv_outs, dim=-1)  # Skip connection to previous features
-        out = self.glb_aggr(out)  # Global aggregation
-        out = scatter_('max', out, index=batch_ids, dim_size=batch_size)
+        out = self.glb_aggr(out)  # Global aggregation  B*N, 1024
+        out = scatter_('max', out, index=batch_ids, dim_size=batch_size)  # B, 1024
         out = self.fc(out)
         return F.log_softmax(out, dim=-1)
     
@@ -89,3 +89,68 @@ class DGCNNCls(BaseNet):
     def pred_(self, pts, batch_ids):
         return self.forward(pts, batch_ids).max(1).indices
     
+class DGCNNSeg(BaseNet):
+    def __init__(self, num_classes, K=20, conv_aggr='max', device=None):
+        super().__init__()
+        print('Build up DGCNNSeg model, num_classes {}, K {}'.format(num_classes, K))
+        self.K = K
+        self.num_classes = num_classes
+        self.conv_aggr = conv_aggr
+        self.edge_conv_dims = [[3, 64, 64], [64, 64, 64], [64, 64]]        
+        self.edge_convs = self.make_edge_conv_layers_()
+        self.aggr_dim = sum([dims[-1] for dims in self.edge_conv_dims])
+        self.glb_aggr = MLP([self.aggr_dim , 1024])
+        self.fc = nn.Sequential(MLP([self.aggr_dim + 1024, 512]),
+                                MLP([512, 256]), nn.Dropout(0.5),
+                                nn.Linear(256, self.num_classes))
+        self.device = device
+        self.to(self.device)
+        
+    def make_edge_conv_layers_(self):
+        """Define structure of the EdgeConv Blocks
+        edge_conv_dims: [[convi_mlp_dims]], e.g., [[3, 64], [64, 128]]
+        """        
+        layers = []
+        for dims in self.edge_conv_dims:
+            mlp_dims = [dims[0] * 2] + dims[1::]
+            layers.append(EdgeConv(nn=MLP(mlp_dims), aggr=self.conv_aggr))
+        return nn.Sequential(*layers)
+    
+    def init_weights_(self):
+        print('Initialize all model parameters: TBD')
+        pass
+        #self.apply(self.xavier_init_func_)
+                    
+    def forward(self, pts, batch_ids):
+        """
+        Input: 
+            - data.pos: (B*N, 3) 
+            - data.batch: (B*N,)
+        Return:
+            - out: (B, C), softmax prob
+        """
+        
+        batch_size = max(batch_ids) + 1  
+        out = pts
+        edge_conv_outs = []
+        for edge_conv in self.edge_convs.children():
+            # Dynamically update graph
+            edge_index = knn_graph(pts, k=self.K, batch=batch_ids)
+            out = edge_conv(out, edge_index)
+            edge_conv_outs.append(out) 
+        conv_cats = torch.cat(edge_conv_outs, dim=-1)  # Skip connection to previous features
+        out = self.glb_aggr(conv_cats)  # Global aggregation
+        glb_feats = scatter_('max', out, index=batch_ids, dim_size=batch_size) # B, 1024
+        glb_feats = glb_feats[batch_ids]  # Expand to B*N, 1024
+        out = torch.cat([glb_feats, conv_cats],  dim=-1)
+        out = self.fc(out)
+        return F.log_softmax(out, dim=-1)
+    
+    def loss_(self, pts, batch_ids, lbls):
+        logits = self.forward(pts, batch_ids)
+        loss = F.nll_loss(logits, lbls)
+        preds = logits.max(dim=1).indices
+        return loss, preds
+    
+    def pred_(self, pts, batch_ids):
+        return self.forward(pts, batch_ids).max(1).indices
