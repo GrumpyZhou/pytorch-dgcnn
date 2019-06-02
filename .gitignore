@@ -1,6 +1,6 @@
 # Program
 *.out
-data*
+data/
 output/
 *.ipynb
 
