@@ -2,7 +2,29 @@ import torch
 import visdom
 import numpy as np
 
-            
+class SegementationTmp:
+    def __init__(self, legend_tag, viswin, visenv, vishost, visport):
+        self.visman = VisManager(visenv, host=vishost, port=visport)
+        
+        # Intialize windows with name
+        loss_win_tag = '{} Loss'.format(viswin) if viswin else 'Loss'
+        acc_win_tag = '{} Val Acc'.format(viswin) if viswin else 'Val'
+        iou_win_tag = '{} Val IoU'.format(viswin) if viswin else 'Val'
+        win_dict = {loss_win_tag : [legend_tag], 
+                    acc_win_tag : [legend_tag],
+                    iou_win_tag : [legend_tag]}
+        self.visman.set_wins(win_dict)
+        
+        self.loss_meter = self.visman.get_meter(loss_win_tag, legend_tag)
+        self.acc_meter = self.visman.get_meter(acc_win_tag, legend_tag)
+        self.iou_meter = self.visman.get_meter(iou_win_tag, legend_tag)
+        
+    def get_meters(self):       
+        return self.loss_meter, self.acc_meter, self.iou_meter
+    
+    def save_state(self):
+        self.visman.save_state()
+        
 class ClassificationTmp:
     def __init__(self, legend_tag, viswin, visenv, vishost, visport):
         self.visman = VisManager(visenv, host=vishost, port=visport)
@@ -75,14 +97,14 @@ class VisManager:
     
     """
     def __init__(self, env, host='localhost', port='8097'):
-        if env is None:
+        self.env = env
+        if self.env is None:
             self.server = None
             print('Visdom is not set..')
         else:
             self.dummy = False
             host = 'http://{}'.format(host)
             self.server = visdom.Visdom(server=host, port=port)
-            self.env = env
             assert self.server.check_connection(), 'Visdom server is not active on server {}:{}'.format(host, port)  
             print('Visdom server connected on {}:{}'.format(host, port))
         self.win_pool = {}
