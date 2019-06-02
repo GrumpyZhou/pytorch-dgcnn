@@ -7,7 +7,7 @@ from torch_geometric.data import (Data, InMemoryDataset, download_url, extract_z
 from torch_geometric.read import read_txt_array
 from torch_geometric.data.makedirs import makedirs
 
-class ShapeNetPart(InMemoryDataset):
+class ShapeNetAll(InMemoryDataset):
     r""" The ShapeNet part level segmentation dataset from the `"A Scalable
     Active Framework for Region Annotation in 3D Shape Collections"
     <http://web.stanford.edu/~ericyi/papers/part_annotation_16_small.pdf>`_
