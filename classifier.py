@@ -67,8 +67,7 @@ def main(config):
 
     # Logging
     optim_tag = get_optim_tag(config) 
-    out_dir = os.path.join(config.odir, config.network, config.dataset, optim_tag)
-    #                       '{}_{}'.format(optim_tag, datetime.datetime.now().strftime("%Y%m%d%H")))
+    out_dir = os.path.join(config.odir, config.network, config.dataset, 'K{}_{}'.format(config.K, optim_tag))
     print('Output folder {}'.format(out_dir))
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -80,7 +79,7 @@ def main(config):
 
     # Initialize dataset
     dataset_handler = Datasets.__dict__[config.dataset](config.data_dir, classification=True)
-    get_label_fn = dataset_handler.label_parser #get_labels_parser(config.dataset, classification=True)
+    get_label_fn = dataset_handler.label_parser
     categories = dataset_handler.categories
     num_classes = dataset_handler.num_classes
     if config.training:
@@ -90,14 +89,12 @@ def main(config):
         loss_meter, acc_meter = visdom.get_meters()
         
         # Data loading
-        #train_set, val_set = get_dataset(config.data_dir, config.dataset, training=True)
         train_set, val_set = dataset_handler.get_train_split(), dataset_handler.get_val_split()
         train_loader = DataLoader(train_set, batch_size=config.batch, shuffle=True, num_workers=config.worker)
         val_loader = DataLoader(val_set, batch_size=config.batch, shuffle=False)
 
         # Initialize network
         net = DGCNNCls(num_classes=num_classes, K=config.K, device=device)
-        # net.init_weights_() # TODO
         net.set_optimizer_(config)
 
         # Load model checkpoint
@@ -107,7 +104,7 @@ def main(config):
             last_epoch = ckpt['last_epoch']
             net.resume_(ckpt['state_dict'], ckpt['optimizer'], ckpt['lr_scheduler'], training=True)
 
-        #Setup visualizer
+        #Training
         start_time = time.time()
         max_epoch =  config.epoch
         print('Start training from {} to {}.'.format(last_epoch+1, max_epoch))
@@ -138,7 +135,6 @@ def main(config):
     else:
         lprint('Testing {} with ckpt {}'.format(config.network, config.ckpt), log)
          # Data loading
-        #test_set = get_dataset(config.data_dir, config.dataset, training=False)
         test_set = dataset_handler.get_test_split()        
         test_loader = DataLoader(test_set, batch_size=config.batch, shuffle=False)
         
