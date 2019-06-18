@@ -35,18 +35,9 @@ class BaseNet(nn.Module):
      
  
     def set_optimizer_(self, config):
-        if config.optim == 'Adam':
-            self.optimizer = torch.optim.Adam(self.parameters(), 
-                                              lr=config.lr, 
-                                              weight_decay=config.weight_decay)
-        elif config.name == 'SGD':
-            self.optimizer = torch.optim.SGD(self.parameters(), 
-                                             lr=config.lr, 
-                                             weight_decay=config.weight_decay, 
-                                             momentum=config.momentum, 
-                                             nesterov=False)
-        
-        # Setup lr scheduler if defined
+        self.optimizer = torch.optim.Adam(self.parameters(), 
+                                          lr=config.lr, 
+                                          weight_decay=config.weight_decay)
         if config.lrd_factor < 1 and config.lrd_step > 0:
             self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 
                                                                 step_size=config.lrd_step, 

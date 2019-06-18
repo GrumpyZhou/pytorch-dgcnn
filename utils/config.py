@@ -2,7 +2,7 @@ import argparse
 from collections import namedtuple
 
 def get_optim_tag(config):
-    optim_tag = '{}_lr{}_wd{}'.format(config.optim, config.lr, config.weight_decay)
+    optim_tag = 'lr{}_wd{}'.format(config.lr, config.weight_decay)
     if config.lrd_step > 0 and config.lrd_factor < 1:
         optim_tag = '{}_lrd{}-{}'.format(optim_tag, config.lrd_factor, config.lrd_step)
     return optim_tag
@@ -12,8 +12,7 @@ class ConfigManager:
         self.ConfigTemplate = namedtuple('Config', 
                                          ['training', 'seed', 'gpu', 'data_dir', 'dataset', 'cat', 'odir', 
                                           'network', 'K', 'ckpt', 'val', 'batch', 'worker', 'epoch',
-                                          'optim', 'momentum', 'weight_decay',
-                                           'lr', 'lrd_factor', 'lrd_step',
+                                          'weight_decay', 'lr', 'lrd_factor', 'lrd_step',
                                           'visenv', 'viswin', 'visport', 'vishost'])
     def parse(self):
         parser = argparse.ArgumentParser(description='Point Cloud Training Argument Parser')
@@ -44,7 +43,7 @@ class ConfigManager:
                                 help='model path to resume trainnig(default: %(default)s)')
         parser.add_argument('--val', metavar='%d', type=int, default=5, 
                                 help='epoch step for validation(default: %(default)s)')
-        parser.add_argument('--batch', metavar='%d', type=int, default=35, 
+        parser.add_argument('--batch', metavar='%d', type=int, default=32, 
                                 help='batch size (default: %(default)s)')
         parser.add_argument('--worker', metavar='%d', type=int, default=2, 
                                 help='number of threads for data loading(default: %(default)s)')  
@@ -52,17 +51,13 @@ class ConfigManager:
                                 help='number of epochs for training(default: %(default)s)')
         
         # Optimization setup
-        parser.add_argument('--optim', type=str, default='Adam', choices=['Adam', 'SGD'],  
-                                help='optimizer type (default: %(default)s)')
-        parser.add_argument('--momentum', metavar='%f', type=float, default=0.9, 
-                                help='momentum factor for SGD(default: %(default)s)')      
         parser.add_argument('--lr', metavar='%f', type=float, default=1e-3,
                                 help='initial learning rate(default: %(default)s)') 
-        parser.add_argument('--lrd_factor', metavar='%f', type=float, default=0.8,
+        parser.add_argument('--lrd_factor', metavar='%f', type=float, default=0.5,
                                 help='decay factor for learning rate decay(default: %(default)s)')
-        parser.add_argument('--lrd_step', metavar='%d', type=int, default=50,
+        parser.add_argument('--lrd_step', metavar='%d', type=int, default=20,
                                 help='decay step for learning rate decay(default: %(default)s)')
-        parser.add_argument('--weight_decay', metavar='%f', type=float, default=1e-3, 
+        parser.add_argument('--weight_decay', metavar='%f', type=float, default=0.0, 
                                 help='weight decay rate(default: %(default)s)')        
 
         # Visdom setup
@@ -81,15 +76,13 @@ class ConfigManager:
     def get_manual_config(self, training=True, seed=7, gpu=0, data_dir='../data',
                           dataset='ModelNet40', cat='All', odir='output/', val=5,
                           network='DGCNNCls', K=20, ckpt=None, batch=32, worker=2, epoch=250,
-                          optim='Adam', momentum=0.9,  weight_decay=1e-3,
-                          lr=1e-3, lrd_factor=0.8, lrd_step=50, 
+                          weight_decay=0, lr=1e-3, lrd_factor=0.5, lrd_step=20, 
                           visenv=None, viswin=None, visport=9333, vishost='localhost'):
         # Mainly for debug or implementation phase
         config = self.ConfigTemplate(training=training, seed=seed, gpu=gpu, data_dir=data_dir,
                                      dataset=dataset,  cat=cat, odir=odir, val=val, network=network, 
                                      K=K, ckpt=ckpt, batch=batch, worker=worker, epoch=epoch,
-                                     optim=optim, momentum=momentum, weight_decay=weight_decay,
-                                     lr=lr, lrd_factor=lrd_factor, lrd_step=lrd_step,
+                                     weight_decay=weight_decay, lr=lr, lrd_factor=lrd_factor, lrd_step=lrd_step,
                                      visenv=visenv, viswin=viswin, visport=visport, vishost=vishost)
         
         return config

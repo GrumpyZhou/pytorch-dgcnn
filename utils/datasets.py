@@ -115,6 +115,7 @@ class ShapeNetCategory:
     def __init__(self, root, category, **kwargs):
         self.root = os.path.join(root, 'ShapeNet')
         self.category = category
+        self.categories = [category]
         self.pre_transform = T.NormalizeScale()
         self.train_transform = T.Compose([
             T.RandomTranslate(0.01),
